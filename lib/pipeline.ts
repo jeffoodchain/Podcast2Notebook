@@ -186,12 +186,12 @@ async function runSerializedTranscription(jobId: string, filePath: string) {
 
   updateJob(jobId, { message: "Transcribing audio..." });
   const poller = setInterval(async () => {
-    const pct = await getTranscriptionProgress(filePath);
+    const pct = await getTranscriptionProgress(jobId);
     if (pct != null) updateJob(jobId, { progress: pct });
   }, 2000);
 
   try {
-    return await transcribeAudio(filePath);
+    return await transcribeAudio(filePath, jobId);
   } finally {
     clearInterval(poller);
     release();

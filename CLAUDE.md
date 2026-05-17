@@ -61,7 +61,7 @@ All generated and uploaded files live under `uploads/` (gitignored) and are serv
 
 ### Python transcription service
 
-`python-service/main.py` wraps `faster-whisper`. The model is loaded once at startup; size/device/compute are env-controlled (`WHISPER_MODEL_SIZE` default `small`, `WHISPER_DEVICE` default `cpu`, `WHISPER_COMPUTE_TYPE` default `int8`). Must run on **Python 3.13** — `ctranslate2` has no 3.14 wheels (use `python3.13 -m venv venv`). Transcriptions are cached as `<audio>.json` next to the audio file, tagged with a `_cache_sig` (file size + mtime) so a reused path with new content is re-transcribed instead of returning a stale transcript. Progress is held in an in-memory dict keyed by absolute file path.
+`python-service/main.py` wraps `faster-whisper`. The model is loaded once at startup; size/device/compute are env-controlled (`WHISPER_MODEL_SIZE` default `small`, `WHISPER_DEVICE` default `cpu`, `WHISPER_COMPUTE_TYPE` default `int8`). Must run on **Python 3.13** — `ctranslate2` has no 3.14 wheels (use `python3.13 -m venv venv`). `POST /transcribe` takes the audio as a **multipart file upload** plus a `transcription_id` — the web app and this service share no filesystem, so they can be deployed as separate services. Results are cached by **content hash** (`sha256`) in `TRANSCRIPT_CACHE_DIR`. Progress is held in an in-memory dict keyed by `transcription_id`; `GET /progress?id=` reads it.
 
 ### Optional integrations / graceful degradation
 

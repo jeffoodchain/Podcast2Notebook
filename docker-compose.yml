@@ -1,8 +1,8 @@
 # One-command setup:  docker compose up --build
 # Then open http://localhost:3000
 #
-# The web and transcription containers share the `uploads` volume so the
-# Python service can read audio files the Next app downloaded. The whisper
+# The web app uploads audio to the transcription service over HTTP, so the two
+# services share no filesystem (and can be deployed independently). The whisper
 # model is cached in `hf-cache` so it's only downloaded once.
 
 services:
@@ -11,7 +11,6 @@ services:
     environment:
       - WHISPER_MODEL_SIZE=${WHISPER_MODEL_SIZE:-small}
     volumes:
-      - uploads:/app/uploads
       - hf-cache:/root/.cache/huggingface
     healthcheck:
       test:

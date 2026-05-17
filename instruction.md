@@ -201,12 +201,47 @@ NotebookLM **沒有公開的消費者 API**(唯一的程式介面是企業版 No
 
 ---
 
-## 10. 部署注意事項
+## 10. 部署到 Zeabur
 
-- pipeline 是背景 fire-and-forget promise,只能跑在長時間存活的程序(Docker 容器 /
-  `next start`),**不能**用 serverless functions。
-- job 狀態存在記憶體,只適用單一程序;要水平擴展請改用 Redis 等外部儲存。
-- Docker 下產出檔存在 `uploads` volume;若整個重建 volume 會清空,正式部署建議改接物件
-  儲存(S3 / R2 / GCS)。
-- 自架 CPU whisper 在雲端共享 vCPU 上又慢又貴。要做成多人服務,建議改用轉錄 API
+Zeabur 不吃 `docker-compose.yml` —— 要把**兩個服務分別部署**在同一個 Zeabur 專案裡。
+
+### 10.1 建立兩個服務
+
+1. **web 服務** —— 從這個 repo 部署,Zeabur 會用根目錄的 `Dockerfile`(Next.js 應用)。
+2. **transcription 服務** —— 同一個 repo 再加一個服務,把它的「Root Directory」設成
+   `python-service`,Zeabur 就會用 `python-service/Dockerfile` 建置。
+
+### 10.2 連接兩個服務
+
+音檔是透過 HTTP 上傳給轉錄服務的,**兩個服務不需要共用磁碟**。它們用 Zeabur 的私有
+網路互連(同專案的服務以服務名稱當 hostname)。在 **web 服務**設定:
+
+```
+TRANSCRIPTION_SERVICE_URL = http://<transcription 服務名稱>:8000
+```
+
+(實際的內部位址請看 Zeabur 該服務的 Networking 面板。)
+
+### 10.3 web 服務的其他環境變數
+
+- `NEXT_PUBLIC_APP_URL` = web 服務的對外網址(Zeabur 給的 domain)
+- `GEMINI_API_KEY` / `GEMINI_MODEL` —— 要用 AI 校正才需要
+- `GOOGLE_OAUTH_CLIENT_ID` / `GOOGLE_OAUTH_CLIENT_SECRET` —— 要用 Drive 才需要
+
+用 Drive 的話,記得到 GCP 把 `<NEXT_PUBLIC_APP_URL>/api/auth/callback/google`
+加進 OAuth 的「已授權重新導向 URI」。
+
+### 10.4 transcription 服務建議
+
+- 至少給 **1–2GB RAM**(whisper 模型常駐約 0.5–1GB)
+- 掛一個 Volume 到 `/root/.cache/huggingface`,模型才不會每次重啟都重新下載
+- CPU 轉錄很慢,長集數要等很久
+
+### 部署通則
+
+- pipeline 是背景 fire-and-forget,只能跑在長存活的程序(容器),**不能**用 serverless。
+- job 狀態存在記憶體,只適用單一程序;要跑多副本請改用 Redis 等外部儲存。
+- 產出檔存在容器本機的 `uploads/`,容器重建會清空;正式環境建議改接物件儲存
+  (S3 / R2 / GCS)。
+- 自架 CPU whisper 又慢又吃資源。要做成多人服務,可考慮改用轉錄 API
   (如 Groq whisper-large-v3、OpenAI `gpt-4o-transcribe`),讓伺服器只負責協調。
