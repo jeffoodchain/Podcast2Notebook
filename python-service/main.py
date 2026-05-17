@@ -33,17 +33,30 @@ class TranscribeResponse(BaseModel):
     language: str
     segments: List[Segment]
 
+def _file_signature(path: str) -> str:
+    """Identifies an audio file by size + mtime, used to invalidate stale cache."""
+    st = os.stat(path)
+    return f"{st.st_size}:{int(st.st_mtime)}"
+
 @app.post("/transcribe", response_model=TranscribeResponse)
 def transcribe_audio(request: TranscribeRequest):
     if not os.path.exists(request.file_path):
         raise HTTPException(status_code=404, detail="Audio file not found")
         
+    # The cache is keyed by file path, but a path can be reused for a different
+    # episode (e.g. same podcast, same day). Tag the cache with the audio file's
+    # size + mtime so a reused path with new content is re-transcribed instead
+    # of silently returning the previous episode's transcript.
     cache_path = request.file_path + ".json"
+    file_sig = _file_signature(request.file_path)
     if os.path.exists(cache_path):
-        print(f"Loading cached transcription for {request.file_path}...")
         try:
             with open(cache_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                cached = json.load(f)
+            if cached.get("_cache_sig") == file_sig:
+                print(f"Loading cached transcription for {request.file_path}...")
+                return cached
+            print(f"Cache stale for {request.file_path}, re-transcribing...")
         except Exception as e:
             print(f"Cache read error: {e}")
 
@@ -78,9 +91,10 @@ def transcribe_audio(request: TranscribeRequest):
         response_data = {
             "text": full_text.strip(),
             "language": info.language,
-            "segments": [s.model_dump() for s in segments]
+            "segments": [s.model_dump() for s in segments],
+            "_cache_sig": file_sig,
         }
-        
+
         # Save to cache
         try:
             with open(cache_path, "w", encoding="utf-8") as f:

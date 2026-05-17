@@ -10,22 +10,36 @@ export interface PodcastMetadata {
   rssPath?: string;
 }
 
+export type ProcessingStatus =
+  | "idle"
+  | "queued"
+  | "parsing"
+  | "downloading"
+  | "transcribing"
+  | "refining"
+  | "generating"
+  | "completed"
+  | "error";
+
+export interface OutputFiles {
+  transcriptTextUrl?: string;
+  transcriptMdUrl?: string;
+  notebooklmSourceUrl?: string;
+  summaryUrl?: string;
+  notesUrl?: string;
+  slidesUrl?: string;
+  mindmapMdUrl?: string;
+  mindmapHtmlUrl?: string;
+}
+
 export interface ProcessingState {
-  status: "idle" | "parsing" | "downloading" | "transcribing" | "generating" | "completed" | "error";
+  status: ProcessingStatus;
   message?: string;
   progress?: number;
   metadata?: PodcastMetadata;
   fileId?: string;
-  outputFiles?: {
-    transcriptTextUrl?: string;
-    transcriptMdUrl?: string;
-    notebooklmSourceUrl?: string;
-    summaryUrl?: string;
-    notesUrl?: string;
-    slidesUrl?: string;
-    mindmapMdUrl?: string;
-    mindmapHtmlUrl?: string;
-  };
+  jobId?: string;
+  outputFiles?: OutputFiles;
   driveLinks?: Record<string, string>;
   exportToCloud?: boolean;
 }
