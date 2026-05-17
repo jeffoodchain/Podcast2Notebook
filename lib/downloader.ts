@@ -35,7 +35,7 @@ export async function downloadAudio(
   });
 
   const contentLength = response.headers["content-length"];
-  if (contentLength && parseInt(contentLength, 10) > MAX_FILE_SIZE) {
+  if (contentLength && parseInt(String(contentLength), 10) > MAX_FILE_SIZE) {
     throw new Error(`File is too large. Max size is ${MAX_FILE_SIZE / (1024 * 1024)}MB.`);
   }
 

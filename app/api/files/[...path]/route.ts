@@ -46,10 +46,16 @@ export async function GET(req: NextRequest, { params }: { params: { path: string
     if (fileName.endsWith(".mp4")) contentType = "video/mp4";
     if (fileName.endsWith(".pptx")) contentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
+    // HTTP headers are Latin-1 only, so a filename with non-ASCII characters
+    // (e.g. the Chinese 文字檔 / 簡報 / 心智圖 / 錄音檔 suffixes) must be sent
+    // RFC 5987-encoded, with a sanitized ASCII fallback for old clients.
+    const asciiFallback = fileName.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "");
+    const disposition = fileName.endsWith(".html") ? "inline" : "attachment";
+
     return new NextResponse(fileBuffer, {
       headers: {
         "Content-Type": contentType,
-        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Disposition": `${disposition}; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
       },
     });
 

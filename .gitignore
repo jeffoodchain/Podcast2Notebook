@@ -4,6 +4,7 @@ node_modules/
 # Next.js
 .next/
 out/
+tsconfig.tsbuildinfo
 
 # Build
 dist/
@@ -35,3 +36,11 @@ npm-debug.log*
 # Editor
 .vscode/
 .idea/
+
+# Claude Code skills/commands (local tooling, not part of the project)
+.claude/skills/
+.claude/commands/
+
+# Scratch / ad-hoc test artifacts
+scratch/test-refine.mjs
+scratch/apple-refined.txt

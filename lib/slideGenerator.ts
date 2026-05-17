@@ -2,7 +2,10 @@ import pptxgen from "pptxgenjs";
 import path from "path";
 import { PodcastMetadata } from "./types";
 
-export async function generateSlides(metadata: PodcastMetadata, fileId: string): Promise<string> {
+export async function generateSlides(
+  metadata: PodcastMetadata,
+  fileId: string
+): Promise<{ slidesUrl: string; slidesPath: string }> {
   const pres = new pptxgen();
 
   // Cover Slide
