@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.gitignore
+uploads
+*.log
+.env
+.env.local
+.claude
+scratch
+python-service/venv
+python-service/__pycache__
+**/__pycache__
+**/*.pyc
+npm-debug.log*
+.DS_Store

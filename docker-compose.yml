@@ -1,0 +1,47 @@
+# One-command setup:  docker compose up --build
+# Then open http://localhost:3000
+#
+# The web and transcription containers share the `uploads` volume so the
+# Python service can read audio files the Next app downloaded. The whisper
+# model is cached in `hf-cache` so it's only downloaded once.
+
+services:
+  transcription:
+    build: ./python-service
+    environment:
+      - WHISPER_MODEL_SIZE=${WHISPER_MODEL_SIZE:-small}
+    volumes:
+      - uploads:/app/uploads
+      - hf-cache:/root/.cache/huggingface
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Override values so they're correct inside the Docker network.
+      - TRANSCRIPTION_SERVICE_URL=http://transcription:8000
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      - transcription
+    restart: unless-stopped
+
+volumes:
+  uploads:
+  hf-cache:
