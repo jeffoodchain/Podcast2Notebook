@@ -59,7 +59,11 @@ A `fileId` is the filename prefix used to thread state across routes. There is n
 
 All generated and uploaded files live under `uploads/` (gitignored) and are served back through the catch-all route `app/api/files/[...path]/route.ts`. The first path segment routes the base dir: `audio/...` → `uploads/audio`, `rss/...` → `uploads/rss`, anything else → `uploads/output`. URLs returned by the generators (`/api/files/...`) point here.
 
-### Python transcription service
+### Transcription: OpenAI or local
+
+`lib/transcriber.ts` has two backends, chosen at runtime: if `OPENAI_API_KEY` is set it transcribes via the OpenAI audio API (`whisper-1`, files over ~24MB are first down-sampled with `ffmpeg`); otherwise it falls back to the local Python service. In OpenAI mode the Python service is not used at all (and need not be deployed).
+
+### Python transcription service (the fallback)
 
 `python-service/main.py` wraps `faster-whisper`. The model is loaded once at startup; size/device/compute are env-controlled (`WHISPER_MODEL_SIZE` default `small`, `WHISPER_DEVICE` default `cpu`, `WHISPER_COMPUTE_TYPE` default `int8`). Must run on **Python 3.13** — `ctranslate2` has no 3.14 wheels (use `python3.13 -m venv venv`). `POST /transcribe` takes the audio as a **multipart file upload** plus a `transcription_id` — the web app and this service share no filesystem, so they can be deployed as separate services. Results are cached by **content hash** (`sha256`) in `TRANSCRIPT_CACHE_DIR`. Progress is held in an in-memory dict keyed by `transcription_id`; `GET /progress?id=` reads it.
 
@@ -75,6 +79,6 @@ All generated and uploaded files live under `uploads/` (gitignored) and are serv
 - TypeScript path alias `@/*` maps to repo root (e.g. `@/lib/jobStore`).
 - API routes return `NextResponse.json({ error: message }, { status })` on failure; the client reads `errorData.error`.
 - `lib/types.ts` (`PodcastMetadata`, `ProcessingState`, `ProcessingStatus`) is the shared contract between the page and the job records — keep it in sync when changing the `Job` shape in `jobStore.ts`.
-- Calls to the Python service use `axios` (`lib/transcriber.ts`), never `fetch` — Node's built-in `fetch` (undici) aborts long requests at a fixed 5-minute `headersTimeout`, which a full transcription exceeds.
+- Calls to the transcription backend use `axios` (`lib/transcriber.ts`), never `fetch` — Node's built-in `fetch` (undici) aborts long requests at a fixed 5-minute `headersTimeout`, which a full transcription exceeds.
 - `tsconfig.json` targets `es5`, so `for...of` over a `Map`/`Set` fails typecheck — use `.forEach`.
 - Don't run `npm run build` while `npm run dev` is running; both write `.next/` and corrupt it. Stop dev first, or rely on `tsc --noEmit`.

@@ -82,11 +82,22 @@ npm run dev
 | `GEMINI_MODEL` | `gemini-2.5-flash` | 校正模型;想更快可用 `gemini-2.5-flash-lite` |
 | `GEMINI_BATCH_SIZE` | `120` | 每次請求送幾段字幕 |
 | `GEMINI_CONCURRENCY` | `4` | 平行請求數;免費層金鑰請調低 |
+| `OPENAI_API_KEY` | (空) | 設了就改用 OpenAI API 轉錄(不需本地 Python 服務);沒設則用本地服務 |
+| `OPENAI_TRANSCRIBE_MODEL` | `whisper-1` | OpenAI 轉錄模型;`whisper-1` 會回傳含時間戳的 segments |
 | `GOOGLE_OAUTH_CLIENT_ID` | (空) | 設了才會啟用 Google Drive 上傳。取得方式見第 5 節 |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | (空) | 同上 |
 | `NEXT_PUBLIC_APP_URL` | `http://localhost:3000` | 應用網址;OAuth 重新導向 URI 由此推算 |
-| `TRANSCRIPTION_SERVICE_URL` | `http://localhost:8000` | 轉錄服務位址(用 Docker 時 compose 會自動設定,不用管) |
-| `WHISPER_MODEL_SIZE` | `small` | 轉錄模型大小:`tiny`/`base`/`small`/`medium`/`large-v3`,越大越準也越慢 |
+| `TRANSCRIPTION_SERVICE_URL` | `http://localhost:8000` | 本地轉錄服務位址(用 Docker 時 compose 會自動設定,不用管) |
+| `WHISPER_MODEL_SIZE` | `small` | 本地轉錄模型大小:`tiny`/`base`/`small`/`medium`/`large-v3`,越大越準也越慢 |
+
+### 轉錄引擎:本地 或 OpenAI
+
+轉錄有兩種模式,自動依 `OPENAI_API_KEY` 切換:
+
+- **沒設 `OPENAI_API_KEY`** → 用本地 `faster-whisper`(免費,但吃 CPU、慢,需要跑 Python 服務)
+- **有設 `OPENAI_API_KEY`** → 改用 OpenAI API 轉錄(快、較準,約 $0.006/分鐘音檔)。
+  此模式**完全不需要 Python 轉錄服務** —— 部署時只要跑 Next.js 一個服務即可,
+  很適合 Zeabur 這類平台。長音檔會自動先用 ffmpeg 降頻壓縮以符合 OpenAI 的 25MB 上限。
 
 ---
 
